@@ -1,33 +1,30 @@
-'use strict';
-
 var express = require('express');
-var routes = require('./app/routes/index.js');
-var mongoose = require('mongoose');
-var passport = require('passport');
-var session = require('express-session');
+var moment = require('moment');
 
 var app = express();
-require('dotenv').load();
-require('./app/config/passport')(passport);
 
-mongoose.connect(process.env.MONGO_URI);
+app.use(express.static('public'));
+app.get('/:timestamp', function(request, response){
+	var timestamp = request.params.timestamp;
+	var unix = null;
+	var normal = null;
 
-app.use('/controllers', express.static(process.cwd() + '/app/controllers'));
-app.use('/public', express.static(process.cwd() + '/public'));
-app.use('/common', express.static(process.cwd() + '/app/common'));
+	if(+timestamp) {
+		unix = +timestamp;
+		normal = moment.unix(+timestamp).format("MMMM Do, YYYY");
+	}
 
-app.use(session({
-	secret: 'secretClementine',
-	resave: false,
-	saveUninitialized: true
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-routes(app, passport);
-
-var port = process.env.PORT || 8080;
-app.listen(port,  function () {
-	console.log('Node.js listening on port ' + port + '...');
+	if(isNaN(+timestamp) && moment(timestamp, "MMMM Do, YYYY").isValid()){
+		unix = moment(timestamp, "MMMM Do, YYYY").format("X");
+		normal = moment(timestamp).format("MMMM Do, YYYY");
+	}
+	var obj = {
+		"unix": unix,
+		"Normal Time": normal
+	}
+	response.send(JSON.stringify(obj, null, 4));
+});
+app.listen(8080, function(err){
+	if(err) throw err;
+	console.log("Listening on port 8080...");
 });
